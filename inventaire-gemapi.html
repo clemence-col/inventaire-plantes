@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventaire participatif — GEMAPI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f4faf7;color:#1a1a1a;min-height:100vh}
+  .page{max-width:480px;margin:0 auto;padding:1.5rem 1rem 3rem}
+  h1{font-size:20px;font-weight:600;color:#1B4332;margin-bottom:4px}
+  .sub{font-size:13px;color:#6c757d;margin-bottom:1.5rem}
+  .card{background:#fff;border:1px solid #d8eedd;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem}
+  .tabs{display:flex;gap:8px;margin-bottom:1rem}
+  .tab{flex:1;padding:9px 4px;border:1px solid #b7d9c4;border-radius:10px;background:#fff;color:#2D6A4F;font-size:13px;cursor:pointer;text-align:center;font-weight:500}
+  .tab.active{background:#2D6A4F;color:#fff;border-color:#2D6A4F}
+  .panel{display:none}.panel.active{display:block}
+  .section-title{font-size:11px;font-weight:600;color:#6c757d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .species-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eef5f0}
+  .species-row:last-child{border-bottom:none;padding-bottom:0}
+  .species-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .species-name{flex:1;font-size:15px;font-weight:500}
+  .species-latin{font-size:11px;color:#6c757d;font-style:italic}
+  .counter{display:flex;align-items:center;gap:8px}
+  .btn-count{width:34px;height:34px;border-radius:50%;border:1px solid #b7d9c4;background:#f4faf7;color:#1B4332;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:400}
+  .btn-count:hover{background:#d8f3dc}
+  .count-val{font-size:18px;font-weight:600;min-width:30px;text-align:center;color:#1B4332}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;color:#6c757d;margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;font-size:14px;padding:8px 10px;border:1px solid #c8dfd0;border-radius:8px;background:#f9fdfb;color:#1a1a1a;outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:#2D6A4F;box-shadow:0 0 0 3px rgba(45,106,79,.12)}
+  .field textarea{resize:vertical;min-height:72px}
+  .btn-submit{width:100%;padding:11px;border-radius:10px;border:none;background:#2D6A4F;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:0.5rem}
+  .btn-submit:hover{background:#1B4332}
+  .success{display:none;text-align:center;padding:2.5rem 1rem}
+  .success .big{font-size:52px;margin-bottom:10px}
+  .success h2{font-size:18px;font-weight:600;color:#1B4332;margin-bottom:6px}
+  .success p{font-size:13px;color:#6c757d;margin-bottom:1.5rem}
+  .qr-section{text-align:center;padding:1rem 0}
+  .qr-frame{display:inline-block;padding:14px;background:#fff;border-radius:12px;border:2px solid #d8eedd}
+  .qr-label{font-size:12px;color:#6c757d;margin-top:10px}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #eef5f0}
+  .result-row:last-child{border-bottom:none}
+  .badge{background:#D8F3DC;color:#1B4332;border-radius:20px;padding:3px 12px;font-size:13px;font-weight:600}
+  .empty{text-align:center;color:#6c757d;font-size:13px;padding:1.5rem}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+  .stat-box{text-align:center;background:#f4faf7;border-radius:10px;padding:10px}
+  .stat-num{font-size:24px;font-weight:700;color:#1B4332}
+  .stat-lbl{font-size:11px;color:#6c757d;margin-top:2px}
+  .tip{background:#e8f5ee;border-left:3px solid #2D6A4F;border-radius:0 8px 8px 0;padding:10px 12px;font-size:13px;color:#1B4332;margin-bottom:1rem;line-height:1.5}
+  @media(max-width:400px){.tab{font-size:12px;padding:8px 2px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('form')">📋 Observation</div>
+    <div class="tab" onclick="showTab('qr')">📱 QR Code</div>
+    <div class="tab" onclick="showTab('results')">📊 Résultats</div>
+  </div>
+
+  <!-- FORMULAIRE -->
+  <div id="panel-form" class="panel active">
+    <h1>Inventaire participatif</h1>
+    <div class="card">
+      <div class="section-title">Comptez ce que vous observez</div>
+      <div class="species-row">
+        <div class="species-icon" style="background:#D8F3DC">🍎</div>
+        <div style="flex:1"><div class="species-name">Pommier</div><div class="species-latin">Malus domestica</div></div>
+        <div class="counter">
+          <button class="btn-count" onclick="change('pommier',-1)">−</button>
+          <span class="count-val" id="val-pommier">0</span>
+          <button class="btn-count" onclick="change('pommier',1)">+</button>
+        </div>
+      </div>
+      <div class="species-row">
+        <div class="species-icon" style="background:#FFF3CD">🌿</div>
+        <div style="flex:1"><div class="species-name">Rhubarbe</div><div class="species-latin">Rheum rhabarbarum</div></div>
+        <div class="counter">
+          <button class="btn-count" onclick="change('rhubarbe',-1)">−</button>
+          <span class="count-val" id="val-rhubarbe">0</span>
+          <button class="btn-count" onclick="change('rhubarbe',1)">+</button>
+        </div>
+      </div>
+      <div class="species-row">
+        <div class="species-icon" style="background:#E8F4F8">🥬</div>
+        <div style="flex:1"><div class="species-name">Blette</div><div class="species-latin">Beta vulgaris var. cicla</div></div>
+        <div class="counter">
+          <button class="btn-count" onclick="change('blette',-1)">−</button>
+          <span class="count-val" id="val-blette">0</span>
+          <button class="btn-count" onclick="change('blette',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Informations complémentaires</div>
+      <div class="field">
+        <label>État général observé</label>
+        <select id="etat">
+          <option value="">— Sélectionner —</option>
+          <option>Très bon état</option>
+          <option>Bon état</option>
+          <option>État moyen</option>
+          <option>Dégradé</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Observations libres (floraison, fruits, ravageurs…)</label>
+        <textarea id="notes" placeholder="Ex : pommier en fleurs, traces de pucerons sur les blettes…"></textarea>
+      </div>
+      <div class="field">
+        <label>Votre prénom (facultatif)</label>
+        <input type="text" id="prenom" placeholder="Ex : Marie">
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="submitForm()">🌱 Envoyer mon observation</button>
+  </div>
+
+  <!-- SUCCÈS -->
+  <div id="panel-success" class="success">
+    <div class="big">🌱</div>
+    <h2>Merci pour votre contribution !</h2>
+    <p>Votre observation a été enregistrée et contribue à l'inventaire du site GEMAPI.</p>
+    <button class="btn-submit" onclick="newObs()" style="max-width:220px;margin:0 auto;display:block">+ Nouvelle observation</button>
+  </div>
+
+  <!-- QR CODE -->
+  <div id="panel-qr" class="panel">
+    <h1>QR Code du formulaire</h1>
+    <p class="sub">À imprimer et coller sur le panneau pédagogique</p>
+    <div class="tip">
+      Ce QR code pointe vers <strong>cette même page</strong>. Une fois le fichier mis en ligne (GitHub Pages, etc.), le QR affichera le bon lien public.
+    </div>
+    <div class="card">
+      <div class="qr-section">
+        <div class="qr-frame">
+          <div id="qrcode"></div>
+        </div>
+        <div class="qr-label">Scannez pour contribuer à l'inventaire des plantes</div>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn-submit" style="width:auto;padding:8px 20px;font-size:13px" onclick="downloadQR()">⬇ Télécharger le QR code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div id="panel-results" class="panel">
+    <h1>Résultats de la session</h1>
+    <p class="sub">Observations enregistrées sur cet appareil</p>
+    <div class="card">
+      <div class="section-title">Total cumulé</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="total-pommier">0</div><div class="stat-lbl">🍎 Pommiers</div></div>
+        <div class="stat-box"><div class="stat-num" id="total-rhubarbe">0</div><div class="stat-lbl">🌿 Rhubarbes</div></div>
+        <div class="stat-box"><div class="stat-num" id="total-blette">0</div><div class="stat-lbl">🥬 Blettes</div></div>
+      </div>
+      <div class="section-title">Dernières observations</div>
+      <div id="obs-list"><div class="empty">Aucune observation pour l'instant.</div></div>
+    </div>
+    <button class="btn-submit" style="background:#555" onclick="exportCSV()">⬇ Exporter en CSV</button>
+  </div>
+</div>
+
+<script>
+const counts = {pommier:0,rhubarbe:0,blette:0};
+const observations = [];
+
+function change(s,d){
+  counts[s]=Math.max(0,counts[s]+d);
+  document.getElementById('val-'+s).textContent=counts[s];
+}
+
+function showTab(name){
+  ['form','qr','results'].forEach((n,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',n===name);
+    const p=document.getElementById('panel-'+n);
+    if(p) p.classList.toggle('active',n===name);
+  });
+  document.getElementById('panel-success').style.display='none';
+  if(name==='qr') generateQR();
+  if(name==='results') renderResults();
+}
+
+function submitForm(){
+  const total=counts.pommier+counts.rhubarbe+counts.blette;
+  if(!total){alert('Veuillez compter au moins une plante avant d\'envoyer.');return;}
+  observations.push({
+    date:new Date().toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    pommier:counts.pommier,rhubarbe:counts.rhubarbe,blette:counts.blette,
+    zone:'',
+    etat:document.getElementById('etat').value||'Non précisé',
+    notes:document.getElementById('notes').value.trim(),
+    prenom:document.getElementById('prenom').value.trim()
+  });
+  document.getElementById('panel-form').style.display='none';
+  document.getElementById('panel-success').style.display='block';
+}
+
+function newObs(){
+  counts.pommier=0;counts.rhubarbe=0;counts.blette=0;
+  ['pommier','rhubarbe','blette'].forEach(s=>document.getElementById('val-'+s).textContent='0');
+  ['etat','notes','prenom'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('panel-success').style.display='none';
+  document.getElementById('panel-form').style.display='block';
+  showTab('form');
+}
+
+function renderResults(){
+  const t=observations.reduce((a,o)=>({pommier:a.pommier+o.pommier,rhubarbe:a.rhubarbe+o.rhubarbe,blette:a.blette+o.blette}),{pommier:0,rhubarbe:0,blette:0});
+  ['pommier','rhubarbe','blette'].forEach(s=>document.getElementById('total-'+s).textContent=t[s]);
+  const list=document.getElementById('obs-list');
+  if(!observations.length){list.innerHTML='<div class="empty">Aucune observation pour l\'instant.</div>';return;}
+  list.innerHTML=observations.slice().reverse().map(o=>`
+    <div class="result-row">
+      <div>
+        <div style="font-size:13px;font-weight:600">${o.prenom||'Anonyme'}</div>
+        <div style="font-size:12px;color:#6c757d">${o.date} — ${o.etat}</div>
+        <div style="font-size:12px;color:#6c757d">🍎 ${o.pommier} · 🌿 ${o.rhubarbe} · 🥬 ${o.blette}</div>
+        ${o.notes?`<div style="font-size:12px;color:#555;font-style:italic;margin-top:2px">"${o.notes}"</div>`:''}
+      </div>
+      <span class="badge">${o.pommier+o.rhubarbe+o.blette}</span>
+    </div>`).join('');
+}
+
+function exportCSV(){
+  if(!observations.length){alert('Aucune observation à exporter.');return;}
+  const header='Date,État,Pommiers,Rhubarbes,Blettes,Total,Prénom,Notes';
+  const rows=observations.map(o=>[o.date,o.etat,o.pommier,o.rhubarbe,o.blette,o.pommier+o.rhubarbe+o.blette,o.prenom,'"'+o.notes.replace(/"/g,'""')+'"'].join(','));
+  const csv='\uFEFF'+[header,...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='inventaire-gemapi-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+let qrDone=false;
+function generateQR(){
+  if(qrDone)return; qrDone=true;
+  new QRCode(document.getElementById('qrcode'),{
+    text:window.location.href,
+    width:180,height:180,
+    colorDark:'#1B4332',colorLight:'#ffffff',
+    correctLevel:QRCode.CorrectLevel.M
+  });
+}
+
+function downloadQR(){
+  const canvas=document.querySelector('#qrcode canvas');
+  if(!canvas){alert('Générez d\'abord le QR code en cliquant sur l\'onglet QR Code.');return;}
+  const a=document.createElement('a');
+  a.download='qrcode-gemapi.png';
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>
